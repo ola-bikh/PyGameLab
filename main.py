@@ -1,15 +1,7 @@
 import pygame
-import random #bibloteka losowosci
-from kostka_do_gry import draw_die  # Funkcja do rysowania kostki
-from simple_popup import show_simple_popup  # Funkcja do wyświetlania okienka zwycięzcy
-
-# Inicjalizacja Pygame
-pygame.init()
-
-# Ustawienia ekranu
-SZEROKOSC, WYSOKOSC = 800, 600  # Większy rozmiar ekranu
-ekran = pygame.display.set_mode((SZEROKOSC, WYSOKOSC))
-pygame.display.set_caption("Gra planszowa Aleksandry Bikhit")  # Zaktualizowany tytuł
+import random
+from kostka_do_gry import draw_die
+from simple_popup import show_simple_popup
 
 # Kolory
 BIALY = (255, 255, 255)
@@ -17,68 +9,110 @@ CZARNY = (0, 0, 0)
 CZERWONY = (255, 0, 0)
 NIEBIESKI = (0, 0, 255)
 
-# Ustawienia gry
-ROZMIAR_PLANSZY = 20  # liczba pól na planszy
-SZEROKOSC_POLA = SZEROKOSC // ROZMIAR_PLANSZY  # Szerokość każdego pola
-pozycje_graczy = [0, 0]  # Pozycje startowe graczy
-aktualny_gracz = 0  # Gracz 1 zaczyna
-czcionka = pygame.font.Font(None, 36)
 
-# Ustawienia kostki
-kostka_x, kostka_y = 650, 50  # Pozycja kostki na ekranie
-rozmiar_kostki = 50  # Rozmiar kostki
-wylosowana_liczba = 1  # Domyślna liczba oczek na kostce
+class Board:
+    def __init__(self, size, width, height):
+        self.size = size
+        self.cell_width = width // size
+        self.width = width
+        self.height = height
 
-# Pętla gry
-dziala = True
-while dziala:
-    ekran.fill(BIALY)
+    def draw(self, ekran):
+        for i in range(self.size):
+            # Górna ścieżka
+            pygame.draw.rect(ekran, CZARNY, (i * self.cell_width, self.height // 3, self.cell_width, 50), 1)
+            # Dolna ścieżka
+            pygame.draw.rect(ekran, CZARNY, (i * self.cell_width, (self.height // 3) * 2, self.cell_width, 50), 1)
 
-    # Rysowanie planszy (dwie ścieżki)
-    for i in range(ROZMIAR_PLANSZY):
-        # Górna ścieżka dla Gracza 1
-        pygame.draw.rect(ekran, CZARNY, (i * SZEROKOSC_POLA, WYSOKOSC // 3, SZEROKOSC_POLA, 50), 1)
-        # Dolna ścieżka dla Gracza 2
-        pygame.draw.rect(ekran, CZARNY, (i * SZEROKOSC_POLA, (WYSOKOSC // 3) * 2, SZEROKOSC_POLA, 50), 1)
 
-    # Rysowanie graczy
-    pygame.draw.circle(ekran, CZERWONY, (pozycje_graczy[0] * SZEROKOSC_POLA + SZEROKOSC_POLA // 2, WYSOKOSC // 3 + 25), 15)  # Gracz 1
-    pygame.draw.circle(ekran, NIEBIESKI, (pozycje_graczy[1] * SZEROKOSC_POLA + SZEROKOSC_POLA // 2, (WYSOKOSC // 3) * 2 + 25), 15)  # Gracz 2
+class Die:
+    def __init__(self, x, y, size):
+        self.x = x
+        self.y = y
+        self.size = size
+        self.value = 1
 
-    # Rysowanie kostki
-    draw_die(ekran, kostka_x, kostka_y, rozmiar_kostki, wylosowana_liczba)
+    def roll(self):
+        self.value = random.randint(1, 6)
 
-    # Wyświetlanie aktualnego gracza
-    tekst_gracza = f"Tura Gracza {aktualny_gracz + 1} (Naciśnij SPACJĘ, aby rzucić)"
-    powierzchnia_tekstu = czcionka.render(tekst_gracza, True, CZARNY)
-    ekran.blit(powierzchnia_tekstu, (50, 20))  # Pozycja tekstu u góry ekranu
+    def draw(self, ekran):
+        draw_die(ekran, self.x, self.y, self.size, self.value)
 
-    # Obsługa zdarzeń
-    for zdarzenie in pygame.event.get():
-        if zdarzenie.type == pygame.QUIT:
-            dziala = False
-        elif zdarzenie.type == pygame.KEYDOWN and zdarzenie.key == pygame.K_SPACE:
-            # Rzut kostką
-            wylosowana_liczba = random.randint(1, 6)
-            print(f"Gracz {aktualny_gracz + 1} wylosował {wylosowana_liczba}")
-            pozycje_graczy[aktualny_gracz] += wylosowana_liczba
 
-            # Sprawdzanie warunku zwycięstwa
-            if pozycje_graczy[aktualny_gracz] >= ROZMIAR_PLANSZY:
-                tekst_zwyciezcy = f"Gracz {aktualny_gracz + 1} wygrał!"
-                wynik = show_simple_popup(ekran, tekst_zwyciezcy)
-                if wynik == "exit":
-                    dziala = False
-                else:
-                    # Resetowanie gry
-                    pozycje_graczy = [0, 0]
-                    aktualny_gracz = 0
-                    continue
+class Game:
+    def __init__(self):
+        pygame.init()
+        self.SZEROKOSC, self.WYSOKOSC = 800, 600
+        self.ekran = pygame.display.set_mode((self.SZEROKOSC, self.WYSOKOSC))
+        pygame.display.set_caption("Gra planszowa Aleksandry Bikhit")
+        self.clock = pygame.time.Clock()
 
-            # Zmiana gracza
-            aktualny_gracz = 1 - aktualny_gracz
+        # Obiekty gry
+        self.board = Board(20, self.SZEROKOSC, self.WYSOKOSC)
+        self.players = [
+            Player(CZERWONY, 0, self.WYSOKOSC // 3),
+            Player(NIEBIESKI, 0, (self.WYSOKOSC // 3) * 2)
+        ]
+        self.die = Die(650, 50, 50)
+        self.current_player = 0
+        self.font = pygame.font.Font(None, 36)
 
-    # Aktualizacja ekranu
-    pygame.display.flip()
+    def display_turn(self):
+        tekst_gracza = f"Tura Gracza {self.current_player + 1} (Naciśnij SPACJĘ, aby rzucić)"
+        powierzchnia_tekstu = self.font.render(tekst_gracza, True, CZARNY)
+        self.ekran.blit(powierzchnia_tekstu, (50, 20))
 
-pygame.quit()
+    def check_winner(self):
+        if self.players[self.current_player].position >= self.board.size:
+            tekst_zwyciezcy = f"Gracz {self.current_player + 1} wygrał!"
+            wynik = show_simple_popup(self.ekran, tekst_zwyciezcy)
+            if wynik == "exit":
+                return True  # Wyjście z gry
+            else:
+                self.reset_game()
+        return False
+
+    def reset_game(self):
+        for player in self.players:
+            player.position = 0
+        self.current_player = 0
+
+    def run(self):
+        running = True
+        while running:
+            self.ekran.fill(BIALY)
+            self.board.draw(self.ekran)
+            for player in self.players:
+                player.draw(self.ekran, self.board.cell_width)
+            self.die.draw(self.ekran)
+            self.display_turn()
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                    self.die.roll()
+                    print(f"Gracz {self.current_player + 1} wylosował {self.die.value}")
+                    self.players[self.current_player].move(self.die.value, self.board.size)
+
+                    if self.check_winner():
+                        running = False
+                        break
+
+                    # Zmiana gracza
+                    self.current_player = 1 - self.current_player
+
+            pygame.display.flip()
+            self.clock.tick(30)
+
+        pygame.quit()
+
+
+if __name__ == "__main__":
+    gra = Game()
+    gra.run()
+
+
+
+
+
