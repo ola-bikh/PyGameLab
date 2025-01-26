@@ -1,5 +1,4 @@
 import pygame
-import random
 from player import Player
 from board import Board
 from die import Die
