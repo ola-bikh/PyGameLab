@@ -9,7 +9,9 @@ class Die:
         self.value = 1
 
     def roll(self):
+        """Roll the die to get a random value."""
         self.value = random.randint(1, 6)
 
     def draw(self, ekran):
+        """Draw the die on the screen."""
         draw_die(ekran, self.x, self.y, self.size, self.value)
